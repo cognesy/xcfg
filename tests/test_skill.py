@@ -74,5 +74,6 @@ def test_named_exports_exist(text: str) -> None:
 
 def test_the_nxm_lesson_is_stated(text: str) -> None:
     """The layout mistake is the reason this skill exists."""
-    assert "N × M" in text or "N x M" in text
+    multiplication_sign = "\u00d7"
+    assert f"N {multiplication_sign} M" in text or "N x M" in text
     assert "N + M" in text
