@@ -135,6 +135,14 @@ invalid configuration: database.pool_size: Input should be a valid integer
 Use `extra="forbid"` on your models so a typo in a config file fails loudly
 instead of vanishing.
 
+## Agent skill
+
+`resources/skills/use-xcfg/SKILL.md` covers structuring configuration
+correctly — in particular the N x M layout mistake, what belongs in a profile
+versus inline, and how to adopt xcfg in a project with a hand-rolled loader.
+`tests/test_skill.py` checks it against the real surface, so a renamed spec
+field fails the build rather than misleading a reader.
+
 ## License
 
 MIT
