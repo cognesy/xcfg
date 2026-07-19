@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-07-19
+
+### Added
+
+- `ConfigSpec.env_extends_default`: a named env config layers *over*
+  `config.default.yml` instead of replacing it, so an env states only what it
+  changes.
+
+  Earned by a third consumer. Without it, every env config must restate every
+  shared section — in one real project two env configs had drifted into
+  160-line near-copies differing by a single key, one of them carrying a
+  copy-paste scar and a duplicated key. Profiled sections solve N x M *within*
+  a config; this solves it *between* configs.
+
 ## [0.3.1] - 2026-07-19
 
 ### Changed

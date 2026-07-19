@@ -141,3 +141,22 @@ def test_supplied_base_still_takes_the_later_layers(loader: ConfigLoader, tmp_pa
 def test_supplied_base_expands_profiles(loader: ConfigLoader) -> None:
     settings = loader.load(base_config={"database": "postgres"}, environ={})
     assert settings.database.pool_size == 20
+
+
+def test_env_config_can_extend_the_default(make_loader: LoaderFactory) -> None:
+    """A named env states only what it changes.
+
+    Without this, every env config restates every shared section and they drift
+    into near-copies — the failure mode observed in a real project.
+    """
+    loader = make_loader(env_extends_default=True)
+    settings = loader.load(env_name="staging", environ={})
+    assert settings.database.driver == "postgres", "the env's own choice applies"
+    assert settings.output.directory == "out", "and the default's sections are inherited"
+
+
+def test_without_extending_the_env_replaces_the_default(make_loader: LoaderFactory) -> None:
+    loader = make_loader(env_extends_default=False)
+    settings = loader.load(env_name="staging", environ={})
+    assert settings.database.driver == "postgres"
+    assert settings.output.directory == "out", "model default, not inherited from config.default"

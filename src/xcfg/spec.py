@@ -73,6 +73,12 @@ class ConfigSpec:
     #: Extra keys stripped before validation, for loader-only machinery.
     non_settings_keys: tuple[str, ...] = field(default_factory=tuple)
 
+    #: When true, a named env config layers *over* `config.default.yml` rather
+    #: than replacing it, so an env config states only what it changes.
+    #: Without this, every env config must restate every shared section, and
+    #: they drift into near-copies of one another.
+    env_extends_default: bool = False
+
     #: Explicit directory for the user layer, overriding the XDG derivation.
     #: Applications using platformdirs pass its result here, so migrating to
     #: xcfg never silently moves where a user's config is read from.

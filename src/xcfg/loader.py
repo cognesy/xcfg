@@ -94,7 +94,7 @@ class ConfigLoader:
         """
         env = dict(environ if environ is not None else os.environ)
         if base_config is None:
-            base_config = read_yaml(self._base_path(config_path, env_name, env))
+            base_config = self._base_layer(config_path, env_name, env)
 
         merged = self._expand_profiles(base_config)
         project = self._project_layer(start_dir or Path.cwd(), project_path)
@@ -156,6 +156,17 @@ class ConfigLoader:
         return tuple(str(p) for p in rules if matches_source(source, str(p)))
 
     # -- layers ----------------------------------------------------------
+
+    def _base_layer(
+        self, config_path: Path | None, env_name: str | None, env: Mapping[str, str]
+    ) -> RawConfig:
+        """The base mapping, optionally layering a named env over the default."""
+        path = self._base_path(config_path, env_name, env)
+        if not self.spec.env_extends_default or path == self.spec.default_config_path:
+            return read_yaml(path)
+        default = self.spec.default_config_path
+        base = read_yaml(default) if default.is_file() else {}
+        return deep_merge(self._expand_profiles(base), read_yaml(path))
 
     def _base_path(
         self, config_path: Path | None, env_name: str | None, env: Mapping[str, str]
