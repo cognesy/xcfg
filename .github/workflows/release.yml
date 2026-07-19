@@ -1,0 +1,112 @@
+# xcfg release workflow.
+#
+# Triggered by a `v*.*.*` tag push. Steps:
+#
+# 1. Verify the tag matches `__version__` (tools/check_release_version.py).
+#    A mismatch fails before anything is built.
+# 2. Run the full quality gate — a tag must not ship a red build.
+# 3. Build the sdist + wheel with `uv build`, then import the wheel in
+#    isolation to prove it installs.
+# 4. Create a GitHub Release with both artifacts and the CHANGELOG excerpt.
+# 5. Publish to PyPI only when explicitly asked via workflow_dispatch.
+#
+# Publishing is opt-in on purpose: xcfg is consumed by git URL today, and a
+# PyPI upload can never be undone for a given name+version.
+#
+# The publish step uses OIDC trusted publishing — no token is stored anywhere.
+# It requires registering `cognesy/xcfg` + `release.yml` as a trusted publisher
+# on PyPI first (Account settings -> Publishing, as a *pending* publisher while
+# the project does not yet exist).
+
+name: release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v0.4.0). Used for manual reruns."
+        type: string
+        required: true
+      publish:
+        description: "Publish to PyPI as well as GitHub Releases."
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify the tag matches the declared version
+        run: uv run python tools/check_release_version.py "${{ inputs.tag || github.ref_name }}"
+
+      - name: Quality gate
+        run: |
+          uv sync --extra dev
+          uv run python -m ruff format --check .
+          uv run python -m ruff check .
+          uv run python -m mypy
+          uv run python -m pytest -q
+
+      - name: Build artifacts
+        run: uv build
+
+      - name: Import the wheel in isolation
+        run: |
+          wheel="$(find dist -name 'xcfg-*.whl' -type f | head -n 1)"
+          uv run --isolated --with "$wheel" python -c "import xcfg; print(xcfg.__version__)"
+
+      - name: Extract the changelog entry for this release
+        id: changelog
+        run: |
+          version="${{ inputs.tag || github.ref_name }}"
+          version="${version#v}"
+          awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" { found = 1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "No CHANGELOG entry for $version." > release-notes.md
+          fi
+
+      - name: Create the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          body_path: release-notes.md
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
+
+  publish:
+    # Opt-in only: a PyPI upload cannot be undone for a name+version.
+    needs: release
+    if: ${{ inputs.publish }}
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write # OIDC trusted publishing; no token is stored
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - run: uv build
+      - run: uv publish --trusted-publishing always

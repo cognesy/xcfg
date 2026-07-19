@@ -719,7 +719,6 @@ wheels = [
 
 [[package]]
 name = "xcfg"
-version = "0.2.1"
 source = { editable = "." }
 dependencies = [
     { name = "pydantic" },
@@ -735,6 +734,12 @@ dev = [
     { name = "types-pyyaml" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "pyyaml" },
+    { name = "types-pyyaml" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.11" },
@@ -746,3 +751,9 @@ requires-dist = [
     { name = "types-pyyaml", marker = "extra == 'dev'" },
 ]
 provides-extras = ["dev"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pyyaml", specifier = ">=6.0.3" },
+    { name = "types-pyyaml", specifier = ">=6.0.12.20260518" },
+]
