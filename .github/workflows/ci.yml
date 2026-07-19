@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: uv sync --extra dev
+      - run: uv run python -m ruff format --check .
+      - run: uv run python -m ruff check .
+      - run: uv run python -m mypy
+      - run: uv run python -m pytest -q
+      - run: uv build --wheel
+      - run: |
+          wheel="$(find dist -name 'xcfg-*.whl' -type f | head -n 1)"
+          uv run --isolated --with "$wheel" python -c "import xcfg; print(xcfg.__version__)"
+          uv run --isolated --with "$wheel" python -c "import importlib.resources as r; assert r.files('xcfg').joinpath('py.typed').is_file()"
