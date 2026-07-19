@@ -173,6 +173,10 @@ class ConfigLoader:
         return path
 
     def _user_layer(self, env: Mapping[str, str]) -> RawConfig | None:
+        explicit = self.spec.user_config_dir
+        if explicit is not None:
+            path = explicit / self.spec.config_name
+            return read_yaml(path) if path.is_file() else None
         if not self.spec.app_name:
             return None
         base = env.get("XDG_CONFIG_HOME")

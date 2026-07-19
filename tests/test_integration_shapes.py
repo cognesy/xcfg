@@ -88,3 +88,31 @@ def test_transform_does_not_reapply_to_environment_values(
 
 def test_no_transform_is_the_default(loader: ConfigLoader) -> None:
     assert loader.load(environ={}).output.directory == "out"
+
+
+def test_user_config_dir_can_be_dictated_by_the_app(
+    make_loader: LoaderFactory, tmp_path: Path
+) -> None:
+    """alex uses platformdirs, which is not XDG on macOS.
+
+    Without this, migrating an app to xcfg would silently change where its
+    user config is read from.
+    """
+    user_dir = tmp_path / "Application Support" / "myapp"
+    user_dir.mkdir(parents=True)
+    (user_dir / "config.yml").write_text("output:\n  directory: platformdirs\n")
+    loader = make_loader(user_config_dir=user_dir)
+    settings = loader.load(environ={}, start_dir=tmp_path)
+    assert settings.output.directory == "platformdirs"
+
+
+def test_explicit_user_dir_ignores_xdg(make_loader: LoaderFactory, tmp_path: Path) -> None:
+    xdg = tmp_path / "xdg"
+    (xdg / "myapp").mkdir(parents=True)
+    (xdg / "myapp" / "config.yml").write_text("output:\n  directory: xdg\n")
+    chosen = tmp_path / "chosen"
+    chosen.mkdir()
+    (chosen / "config.yml").write_text("output:\n  directory: chosen\n")
+    loader = make_loader(user_config_dir=chosen)
+    settings = loader.load(environ={"XDG_CONFIG_HOME": str(xdg)}, start_dir=tmp_path)
+    assert settings.output.directory == "chosen"

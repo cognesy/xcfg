@@ -73,6 +73,11 @@ class ConfigSpec:
     #: Extra keys stripped before validation, for loader-only machinery.
     non_settings_keys: tuple[str, ...] = field(default_factory=tuple)
 
+    #: Explicit directory for the user layer, overriding the XDG derivation.
+    #: Applications using platformdirs pass its result here, so migrating to
+    #: xcfg never silently moves where a user's config is read from.
+    user_config_dir: Path | None = None
+
     #: Explicit base-config path, when it is not `<config_root>/config.default.yml`.
     #: Applications that ship defaults under a different name set this.
     default_config: Path | None = None
