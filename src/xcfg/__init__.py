@@ -41,7 +41,7 @@ from .loader import (
 )
 from .spec import DEFAULT_CONFIG_NAME, ENV_CONFIG_PREFIX, ConfigSpec
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 __all__ = [
     "DEFAULT_CONFIG_NAME",
