@@ -8,8 +8,13 @@ the loader.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
+
+#: A configuration mapping before validation.
+RawConfig = dict[str, Any]
 
 #: Default filename for the packaged base config and for user/project configs.
 DEFAULT_CONFIG_NAME = "config.yml"
@@ -68,6 +73,15 @@ class ConfigSpec:
     #: Extra keys stripped before validation, for loader-only machinery.
     non_settings_keys: tuple[str, ...] = field(default_factory=tuple)
 
+    #: Explicit base-config path, when it is not `<config_root>/config.default.yml`.
+    #: Applications that ship defaults under a different name set this.
+    default_config: Path | None = None
+
+    #: Applied to the merged file layers before environment overrides are
+    #: merged in. The hook for placeholder resolution such as `${VAR}`, which
+    #: should apply to file-sourced values but not re-apply to env values.
+    file_layer_transform: Callable[[RawConfig], RawConfig] | None = None
+
     def __post_init__(self) -> None:
         if not self.config_root:
             raise ValueError("ConfigSpec requires a config_root")
@@ -86,6 +100,8 @@ class ConfigSpec:
 
     @property
     def default_config_path(self) -> Path:
+        if self.default_config is not None:
+            return self.default_config
         return self.config_root / f"{ENV_CONFIG_PREFIX}default{_suffix(self.config_name)}"
 
     def env_config_path(self, name: str) -> Path:
@@ -106,4 +122,4 @@ def _suffix(config_name: str) -> str:
     return Path(config_name).suffix or ".yml"
 
 
-__all__ = ["DEFAULT_CONFIG_NAME", "ENV_CONFIG_PREFIX", "ConfigSpec"]
+__all__ = ["DEFAULT_CONFIG_NAME", "ENV_CONFIG_PREFIX", "ConfigSpec", "RawConfig"]

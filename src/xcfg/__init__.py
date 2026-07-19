@@ -32,16 +32,15 @@ decision stay with the application.
 from .errors import ConfigError
 from .loader import (
     ConfigLoader,
-    RawConfig,
     coerce_scalar,
     deep_merge,
     matches_source,
     read_yaml,
     set_dotted,
 )
-from .spec import DEFAULT_CONFIG_NAME, ENV_CONFIG_PREFIX, ConfigSpec
+from .spec import DEFAULT_CONFIG_NAME, ENV_CONFIG_PREFIX, ConfigSpec, RawConfig
 
-__version__ = "0.1.1"
+__version__ = "0.2.0"
 
 __all__ = [
     "DEFAULT_CONFIG_NAME",

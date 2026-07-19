@@ -29,11 +29,9 @@ import yaml
 from pydantic import BaseModel, ValidationError
 
 from .errors import ConfigError
-from .spec import ENV_CONFIG_PREFIX, ConfigSpec
+from .spec import ENV_CONFIG_PREFIX, ConfigSpec, RawConfig
 
 TSettings = TypeVar("TSettings", bound=BaseModel)
-
-RawConfig = dict[str, Any]
 
 
 class ConfigLoader:
@@ -54,6 +52,7 @@ class ConfigLoader:
         start_dir: Path | None = None,
         environ: Mapping[str, str] | None = None,
         source: Path | None = None,
+        project_path: Path | None = None,
     ) -> Any:
         """Compose and validate settings. Returns an instance of `model`."""
         merged = self.load_raw(
@@ -63,6 +62,7 @@ class ConfigLoader:
             start_dir=start_dir,
             environ=environ,
             source=source,
+            project_path=project_path,
         )
         try:
             return self.model(**merged)
@@ -78,15 +78,26 @@ class ConfigLoader:
         start_dir: Path | None = None,
         environ: Mapping[str, str] | None = None,
         source: Path | None = None,
+        project_path: Path | None = None,
     ) -> RawConfig:
-        """The merged mapping, before validation. Useful for diagnostics."""
+        """The merged mapping, before validation. Useful for diagnostics.
+
+        `project_path` names the project layer directly, for applications that
+        resolve their project root themselves instead of walking up from the
+        working directory.
+        """
         env = dict(environ if environ is not None else os.environ)
         base = self._base_path(config_path, env_name, env)
 
         merged = self._expand_profiles(read_yaml(base))
-        for layer in (self._user_layer(env), self._project_layer(start_dir or Path.cwd())):
+        project = self._project_layer(start_dir or Path.cwd(), project_path)
+        for layer in (self._user_layer(env), project):
             if layer is not None:
                 merged = deep_merge(merged, self._expand_profiles(layer))
+
+        transform = self.spec.file_layer_transform
+        if transform is not None:
+            merged = transform(merged)
 
         merged = deep_merge(merged, self._env_layer(env))
         merged = self._apply_source_rules(merged, source)
@@ -121,13 +132,15 @@ class ConfigLoader:
         env_name: str | None = None,
         start_dir: Path | None = None,
         environ: Mapping[str, str] | None = None,
+        project_path: Path | None = None,
     ) -> tuple[str, ...]:
         """Patterns from the source-rules key that apply to this source."""
         if not self.spec.source_rules_key:
             return ()
         env = dict(environ if environ is not None else os.environ)
         merged = self._expand_profiles(read_yaml(self._base_path(config_path, env_name, env)))
-        for layer in (self._user_layer(env), self._project_layer(start_dir or Path.cwd())):
+        project = self._project_layer(start_dir or Path.cwd(), project_path)
+        for layer in (self._user_layer(env), project):
             if layer is not None:
                 merged = deep_merge(merged, layer)
         rules = merged.get(self.spec.source_rules_key)
@@ -167,7 +180,9 @@ class ConfigLoader:
         path = root / self.spec.app_name / self.spec.config_name
         return read_yaml(path) if path.is_file() else None
 
-    def _project_layer(self, start: Path) -> RawConfig | None:
+    def _project_layer(self, start: Path, explicit: Path | None = None) -> RawConfig | None:
+        if explicit is not None:
+            return read_yaml(explicit) if explicit.is_file() else None
         if not self.spec.project_dir:
             return None
         current = start.resolve()

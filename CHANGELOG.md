@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-07-19
+
+### Added
+
+Three capabilities earned by a second consuming application (alex), each stated
+generally rather than for that one caller:
+
+- `load(project_path=...)` names the project layer directly, for applications
+  that resolve their own project root instead of walking up from the working
+  directory.
+- `ConfigSpec.default_config` points at a base config that is not
+  `<config_root>/config.default.yml`.
+- `ConfigSpec.file_layer_transform` runs over the merged file layers before
+  environment overrides — the hook for `${VAR}` placeholder resolution, which
+  should apply to file-sourced values without re-applying to env values.
+
+`RawConfig` now lives in `xcfg.spec` and is re-exported unchanged.
+
 ## [0.1.1] - 2026-07-19
 
 ### Changed

@@ -1,6 +1,6 @@
 [project]
 name = "xcfg"
-version = "0.1.1"
+version = "0.2.0"
 description = "Layered, profile-composable configuration micro-library. YAML layers, env overrides, pydantic validation."
 readme = "README.md"
 requires-python = ">=3.10"
