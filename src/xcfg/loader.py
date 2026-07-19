@@ -53,6 +53,7 @@ class ConfigLoader:
         environ: Mapping[str, str] | None = None,
         source: Path | None = None,
         project_path: Path | None = None,
+        base_config: RawConfig | None = None,
     ) -> Any:
         """Compose and validate settings. Returns an instance of `model`."""
         merged = self.load_raw(
@@ -63,6 +64,7 @@ class ConfigLoader:
             environ=environ,
             source=source,
             project_path=project_path,
+            base_config=base_config,
         )
         try:
             return self.model(**merged)
@@ -79,17 +81,22 @@ class ConfigLoader:
         environ: Mapping[str, str] | None = None,
         source: Path | None = None,
         project_path: Path | None = None,
+        base_config: RawConfig | None = None,
     ) -> RawConfig:
         """The merged mapping, before validation. Useful for diagnostics.
 
         `project_path` names the project layer directly, for applications that
         resolve their project root themselves instead of walking up from the
-        working directory.
+        working directory. `base_config` supplies the base layer as an
+        already-loaded mapping, for defaults that live somewhere other than a
+        readable file -- packaged resources reached through the application's
+        own loader, for instance.
         """
         env = dict(environ if environ is not None else os.environ)
-        base = self._base_path(config_path, env_name, env)
+        if base_config is None:
+            base_config = read_yaml(self._base_path(config_path, env_name, env))
 
-        merged = self._expand_profiles(read_yaml(base))
+        merged = self._expand_profiles(base_config)
         project = self._project_layer(start_dir or Path.cwd(), project_path)
         for layer in (self._user_layer(env), project):
             if layer is not None:

@@ -116,3 +116,28 @@ def test_explicit_user_dir_ignores_xdg(make_loader: LoaderFactory, tmp_path: Pat
     loader = make_loader(user_config_dir=chosen)
     settings = loader.load(environ={"XDG_CONFIG_HOME": str(xdg)}, start_dir=tmp_path)
     assert settings.output.directory == "chosen"
+
+
+def test_base_config_can_be_supplied_as_a_mapping(loader: ConfigLoader, tmp_path: Path) -> None:
+    """Defaults may live somewhere other than a readable file.
+
+    alex ships them as package data and reaches them through its own
+    ResourceLoader, which its architecture tests require.
+    """
+    settings = loader.load(base_config={"output": {"directory": "from-resource"}}, environ={})
+    assert settings.output.directory == "from-resource"
+
+
+def test_supplied_base_still_takes_the_later_layers(loader: ConfigLoader, tmp_path: Path) -> None:
+    work = tmp_path / "work"
+    (work / ".myapp").mkdir(parents=True)
+    (work / ".myapp" / "config.yml").write_text("output:\n  verbose: true\n")
+    settings = loader.load(
+        base_config={"output": {"directory": "base"}}, start_dir=work, environ={}
+    )
+    assert (settings.output.directory, settings.output.verbose) == ("base", True)
+
+
+def test_supplied_base_expands_profiles(loader: ConfigLoader) -> None:
+    settings = loader.load(base_config={"database": "postgres"}, environ={})
+    assert settings.database.pool_size == 20

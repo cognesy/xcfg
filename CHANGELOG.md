@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-07-19
+
+### Added
+
+- `load(base_config=...)` supplies the base layer as an already-loaded mapping,
+  for defaults that do not live in a readable file. alex ships its defaults as
+  package data and its architecture tests forbid reading resources by raw path,
+  so it must supply them through its own `ResourceLoader`.
+
 ## [0.2.1] - 2026-07-19
 
 ### Added
